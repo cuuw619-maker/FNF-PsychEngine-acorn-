@@ -157,7 +157,6 @@ class MainMenuState extends MusicBeatState
 			if (controls.UI_DOWN_P)
 				changeItem(1);
 
-			var allowMouse:Bool = allowMouse;
 			if (allowMouse && ((FlxG.mouse.deltaScreenX != 0 && FlxG.mouse.deltaScreenY != 0) || FlxG.mouse.justPressed)) //FlxG.mouse.deltaScreenX/Y checks is more accurate than FlxG.mouse.justMoved
 			{
 				allowMouse = false;
@@ -373,8 +372,8 @@ class MainMenuState extends MusicBeatState
 				x: FlxG.width / 2 - item.width * targetScale / 2,
 				y: targetY,
 				alpha: targetAlpha
-			}, 0.18, {ease: FlxEase.quadOut});
-			FlxTween.tween(item.scale, {x: targetScale, y: targetScale}, 0.18, {ease: FlxEase.backOut});
+			}, 0.22, {ease: FlxEase.quadOut});
+			FlxTween.tween(item.scale, {x: targetScale, y: targetScale}, 0.22, {ease: FlxEase.backOut});
 		}
 
 		var selectedItem:FlxSprite;
