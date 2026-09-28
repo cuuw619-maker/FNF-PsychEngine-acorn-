@@ -110,9 +110,4 @@
 	<haxeflag name="--macro" value="include('my.pack')" />
 	<haxedef name="hscriptPos" if="HSCRIPT_ALLOWED" />
 
-	<!-- Acorn application icon -->
-	<icon path="logo.png" size="16"/>
-	<icon path="logo.png" size="32"/>
-	<icon path="logo.png" size="64"/>
-	<icon path="logo.png" />
 </project>
