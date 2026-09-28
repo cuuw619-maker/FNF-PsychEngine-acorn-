@@ -712,13 +712,27 @@ class ModsMenuState extends MusicBeatState
 				continue;
 			}
 
-			mod.visible = (i >= minVisible && i <= maxVisible);
-			mod.x = bgList.x + 5;
-			mod.y = bgList.y + (86 * (i - centerMod + 2)) + 5;
-			
-			mod.alpha = 0.6;
-			if(i == curSelectedMod) mod.alpha = 1;
+			var visible:Bool = (i >= minVisible && i <= maxVisible);
+			var targetX:Float = bgList.x + 5;
+			var targetY:Float = bgList.y + (86 * (i - centerMod + 2)) + 5;
+			var targetAlpha:Float = (i == curSelectedMod) ? 1.0 : 0.58;
+
+			mod.visible = visible;
 			mod.selectBg.visible = (i == curSelectedMod && hoveringOnMods);
+
+			if(visible)
+			{
+				FlxTween.cancelTweensOf(mod);
+				FlxTween.tween(mod, {
+					x: targetX,
+					y: targetY,
+					alpha: targetAlpha
+				}, 0.16, {ease: FlxEase.circOut});
+			}
+			else
+			{
+				mod.alpha = 0;
+			}
 		}
 	}
 
