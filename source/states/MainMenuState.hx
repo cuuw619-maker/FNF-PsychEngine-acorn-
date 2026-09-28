@@ -357,10 +357,24 @@ class MainMenuState extends MusicBeatState
 		curSelected = FlxMath.wrap(curSelected + change, 0, optionShit.length - 1);
 		FlxG.sound.play(Paths.sound('scrollMenu'));
 
-		for (item in menuItems)
+		for (i in 0...menuItems.length)
 		{
+			var item = menuItems.members[i];
 			item.animation.play('idle');
 			item.centerOffsets();
+
+			var distance:Int = i - curSelected;
+			var targetScale:Float = (i == curSelected) ? 1.04 : 0.94;
+			var targetAlpha:Float = (i == curSelected) ? 1.0 : 0.72;
+			var targetY:Float = item.y - (distance * 6);
+
+			FlxTween.cancelTweensOf(item);
+			FlxTween.tween(item, {
+				x: FlxG.width / 2 - item.width * targetScale / 2,
+				y: targetY,
+				alpha: targetAlpha
+			}, 0.18, {ease: FlxEase.quadOut});
+			FlxTween.tween(item.scale, {x: targetScale, y: targetScale}, 0.18, {ease: FlxEase.backOut});
 		}
 
 		var selectedItem:FlxSprite;
