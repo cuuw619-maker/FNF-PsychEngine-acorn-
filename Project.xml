@@ -110,4 +110,6 @@
 	<haxeflag name="--macro" value="include('my.pack')" />
 	<haxedef name="hscriptPos" if="HSCRIPT_ALLOWED" />
 
+	<!-- Use only the user-provided root logo.png. No generated logo asset. -->
+	<icon path="logo.png" />
 </project>
