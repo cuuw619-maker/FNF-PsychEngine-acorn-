@@ -73,11 +73,16 @@ jobs:
         run: echo "${{github.run_id}}" > VERSION
       - name: Compile
         run: haxelib run lime build Project.xml windows --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
-      - name: Publish Artifact
+      - name: Publish Windows build
         uses: actions/upload-artifact@v4.3.4
         with:
           name: AcornEngine-Windows
           path: export/release/windows/bin
+      - name: Publish EXE
+        uses: actions/upload-artifact@v4.3.4
+        with:
+          name: AcornEngine-EXE
+          path: export/release/windows/bin/AcornEngine.exe
   buildMac:
     runs-on: macos-15
 
