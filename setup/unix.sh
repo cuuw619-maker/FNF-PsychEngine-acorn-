@@ -2,9 +2,9 @@
 # SETUP FOR MAC AND LINUX SYSTEMS!!!
 # REMINDER THAT YOU NEED HAXE INSTALLED PRIOR TO USING THIS
 # https://haxe.org/download
-cd ..
-echo Makking the main haxelib and setuping folder in same time..
-mkdir ~/haxelib && haxelib setup ~/haxelib
+echo "Setting up Haxe libraries..."
+mkdir -p "$HOME/haxelib"
+haxelib setup "$HOME/haxelib"
 echo Installing dependencies...
 echo This might take a few moments depending on your internet speed.
 haxelib install flixel 5.6.1
