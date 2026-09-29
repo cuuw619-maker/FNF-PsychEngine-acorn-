@@ -3,7 +3,7 @@ package backend;
 #if mobile
 import flixel.FlxG;
 import flixel.FlxSprite;
-import flixel.FlxText;
+import flixel.text.FlxText;
 import flixel.group.FlxTypedGroup;
 import flixel.util.FlxColor;
 import openfl.Lib;
