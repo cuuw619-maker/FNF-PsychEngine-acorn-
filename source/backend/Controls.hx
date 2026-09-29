@@ -5,6 +5,10 @@ import flixel.input.gamepad.FlxGamepadInputID;
 import flixel.input.gamepad.mappings.FlxGamepadMapping;
 import flixel.input.keyboard.FlxKey;
 
+#if mobile
+import backend.MobileControls;
+#end
+
 class Controls
 {
 	//Keeping same use cases on stuff for it to be easier to understand/use
@@ -90,7 +94,7 @@ class Controls
 		var result:Bool = (FlxG.keys.anyJustPressed(keyboardBinds[key]) == true);
 		if(result) controllerMode = false;
 
-		return result || _myGamepadJustPressed(gamepadBinds[key]) == true;
+		return result || _myGamepadJustPressed(gamepadBinds[key]) == true #if mobile || MobileControls.justPressed(key) #end;
 	}
 
 	public function pressed(key:String)
@@ -98,7 +102,7 @@ class Controls
 		var result:Bool = (FlxG.keys.anyPressed(keyboardBinds[key]) == true);
 		if(result) controllerMode = false;
 
-		return result || _myGamepadPressed(gamepadBinds[key]) == true;
+		return result || _myGamepadPressed(gamepadBinds[key]) == true #if mobile || MobileControls.pressed(key) #end;
 	}
 
 	public function justReleased(key:String)
@@ -106,7 +110,7 @@ class Controls
 		var result:Bool = (FlxG.keys.anyJustReleased(keyboardBinds[key]) == true);
 		if(result) controllerMode = false;
 
-		return result || _myGamepadJustReleased(gamepadBinds[key]) == true;
+		return result || _myGamepadJustReleased(gamepadBinds[key]) == true #if mobile || MobileControls.justReleased(key) #end;
 	}
 
 	public var controllerMode:Bool = false;
