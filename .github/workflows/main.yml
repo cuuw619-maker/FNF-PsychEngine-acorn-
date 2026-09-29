@@ -25,9 +25,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.4
+        shell: cmd
+        run: |
+          choco install haxe --version=4.3.4 -y --no-progress
+          refreshenv
+          haxe --version
 
       - name: Install dependencies
         shell: cmd
@@ -75,9 +77,12 @@ jobs:
           distribution: temurin
           java-version: '17'
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.4
+        run: |
+          curl -L --fail https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-linux64.tar.gz -o /tmp/haxe.tar.gz
+          sudo mkdir -p /opt/haxe
+          sudo tar -xzf /tmp/haxe.tar.gz -C /opt/haxe --strip-components=1
+          echo "/opt/haxe" >> "$GITHUB_PATH"
+          haxe --version
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
       - name: Install Android SDK components
@@ -112,9 +117,12 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.4
+        run: |
+          curl -L --fail https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-linux64.tar.gz -o /tmp/haxe.tar.gz
+          sudo mkdir -p /opt/haxe
+          sudo tar -xzf /tmp/haxe.tar.gz -C /opt/haxe --strip-components=1
+          echo "/opt/haxe" >> "$GITHUB_PATH"
+          haxe --version
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libvlc-dev libvlccore-dev
@@ -146,9 +154,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Haxe
-        uses: krdlab/setup-haxe@master
-        with:
-          haxe-version: 4.3.4
+        run: |
+          brew install haxe
+          haxe --version
 
       - name: Install Haxe dependencies
         run: |
