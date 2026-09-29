@@ -16,98 +16,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  buildWindows:
-    name: Windows / EXE
-    runs-on: windows-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Haxe
-        shell: cmd
-        run: |
-          choco install haxe --version=4.3.4 -y --no-progress
-          refreshenv
-          haxe --version
-
-      - name: Install dependencies
-        shell: cmd
-        run: call setup\\windows.bat
-
-      - name: Create version
-        shell: pwsh
-        run: Set-Content -Path VERSION -Value "0.1.0-${{ github.run_number }}"
-
-      - name: Compile Windows
-        shell: cmd
-        run: haxelib run lime build Project.xml windows --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
-
-      - name: Verify EXE
-        shell: pwsh
-        run: |
-          if (!(Test-Path "export/release/windows/bin/AcornEngine.exe")) {
-            Write-Error "AcornEngine.exe was not generated."
-          }
-
-      - name: Publish Windows build
-        uses: actions/upload-artifact@v4
-        with:
-          name: AcornEngine-Windows
-          path: export/release/windows/bin
-          if-no-files-found: error
-
-      - name: Publish EXE
-        uses: actions/upload-artifact@v4
-        with:
-          name: AcornEngine-EXE
-          path: export/release/windows/bin/AcornEngine.exe
-          if-no-files-found: error
-
-  buildAndroid:
-    name: Android / APK
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-      - name: Setup Haxe
-        run: |
-          curl -L --fail https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-linux64.tar.gz -o /tmp/haxe.tar.gz
-          sudo mkdir -p /opt/haxe
-          sudo tar -xzf /tmp/haxe.tar.gz -C /opt/haxe --strip-components=1
-          echo "/opt/haxe" >> "$GITHUB_PATH"
-          haxe --version
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android SDK components
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
-      - name: Install Haxe dependencies
-        run: |
-          haxelib setup ~/haxelib
-          sh ./setup/unix.sh
-          haxelib run lime setup android
-      - name: Create version
-        run: echo "0.1.0-${{ github.run_number }}" > VERSION
-      - name: Compile Android APK
-        run: haxelib run lime build Project.xml android --app-version="0.1.0-${{ github.run_number }}" -D officialBuild -D release
-      - name: Find APK
-        run: |
-          APK=$(find export/release/android -type f -name "*.apk" | head -n 1)
-          test -n "$APK"
-          cp "$APK" AcornEngine-Android.apk
-      - name: Publish Android APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: AcornEngine-Android-APK
-          path: AcornEngine-Android.apk
-          if-no-files-found: error
-
   buildLinux:
     name: Linux
     runs-on: ubuntu-latest
@@ -115,7 +23,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Haxe
         run: |
           curl -L --fail https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-linux64.tar.gz -o /tmp/haxe.tar.gz
@@ -123,57 +30,19 @@ jobs:
           sudo tar -xzf /tmp/haxe.tar.gz -C /opt/haxe --strip-components=1
           echo "/opt/haxe" >> "$GITHUB_PATH"
           haxe --version
-
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libvlc-dev libvlccore-dev
-
       - name: Install Haxe dependencies
         run: |
           haxelib setup ~/haxelib
           sh ./setup/unix.sh
-
       - name: Create version
         run: echo "0.1.0-${{ github.run_number }}" > VERSION
-
       - name: Compile Linux
         run: haxelib run lime build Project.xml linux --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
-
       - name: Publish Linux build
         uses: actions/upload-artifact@v4
         with:
           name: AcornEngine-Linux
           path: export/release/linux/bin
           if-no-files-found: error
-
-  buildMac:
-    name: macOS
-    runs-on: macos-15
-    timeout-minutes: 45
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Haxe
-        run: |
-          brew install haxe
-          haxe --version
-
-      - name: Install Haxe dependencies
-        run: |
-          haxelib setup ~/haxelib
-          sh ./setup/unix.sh
-
-      - name: Create version
-        run: echo "0.1.0-${{ github.run_number }}" > VERSION
-
-      - name: Compile macOS
-        run: haxelib run lime build Project.xml mac --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
-
-      - name: Publish macOS build
-        uses: actions/upload-artifact@v4
-        with:
-          name: AcornEngine-macOS
-          path: export/release/macos/bin
-          if-no-files-found: error
-
-# Trigger build: 2026-09-29T18:14:44.836Z
