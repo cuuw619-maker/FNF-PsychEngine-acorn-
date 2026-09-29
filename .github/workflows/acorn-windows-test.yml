@@ -1,0 +1,31 @@
+name: Acorn Windows Build Test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: krdlab/setup-haxe@master
+        with:
+          haxe-version: 4.3.4
+      - name: Install dependencies
+        shell: cmd
+        run: call setup\windows.bat
+      - name: Compile Windows
+        shell: cmd
+        run: haxelib run lime build Project.xml windows -D officialBuild
+      - name: Verify EXE
+        shell: pwsh
+        run: |
+          if (!(Test-Path "export/release/windows/bin/AcornEngine.exe")) {
+            Write-Error "AcornEngine.exe was not generated."
+          }
