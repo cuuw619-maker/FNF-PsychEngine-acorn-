@@ -27,6 +27,13 @@ class MobileControls extends FlxTypedGroup<FlxSprite>
 	private static var justAccept:Bool = false;
 	private static var justBack:Bool = false;
 	private static var justPause:Bool = false;
+	private static var releasedUp:Bool = false;
+	private static var releasedDown:Bool = false;
+	private static var releasedLeft:Bool = false;
+	private static var releasedRight:Bool = false;
+	private static var releasedAccept:Bool = false;
+	private static var releasedBack:Bool = false;
+	private static var releasedPause:Bool = false;
 
 	public function new(?camera:flixel.FlxCamera)
 	{
@@ -81,16 +88,24 @@ class MobileControls extends FlxTypedGroup<FlxSprite>
 			if (x > 995) return "BACK";
 			return "PAUSE";
 		}
-		if (x >= 35 && x < 370 && y > 450) return directionFor(x, y, 35);
-		if (x >= 825 && x < 1170 && y > 450) return directionFor(x, y, 825);
+		if (x >= 35 && x < 370 && y > 450 && y < 700) return directionFor(x, y, 35);
+		if (x >= 825 && x < 1170 && y > 450 && y < 700) return directionFor(x, y, 825);
 		return "";
 	}
 
 	private static function directionFor(x:Float, y:Float, baseX:Float):String
 	{
-		if (x < baseX + 115) return "LEFT";
-		if (x < baseX + 230) return "DOWN";
-		if (x < baseX + 345) return "RIGHT";
+		if (x < baseX || x >= baseX + 345 || y < 475 || y >= 700) return "";
+		if (x < baseX + 105)
+			return (y >= 535 && y < 640) ? "LEFT" : "";
+		if (x < baseX + 220)
+		{
+			if (y >= 475 && y < 580) return "UP";
+			if (y >= 595 && y < 700) return "DOWN";
+			return "";
+		}
+		if (x < baseX + 335)
+			return (y >= 535 && y < 640) ? "RIGHT" : "";
 		return "";
 	}
 
@@ -124,13 +139,13 @@ class MobileControls extends FlxTypedGroup<FlxSprite>
 	{
 		switch (key)
 		{
-			case "UP": up = value; if (value) justUp = true;
-			case "DOWN": down = value; if (value) justDown = true;
-			case "LEFT": left = value; if (value) justLeft = true;
-			case "RIGHT": right = value; if (value) justRight = true;
-			case "ACCEPT": accept = value; if (value) justAccept = true;
-			case "BACK": back = value; if (value) justBack = true;
-			case "PAUSE": pause = value; if (value) justPause = true;
+			case "UP": up = value; if (value) justUp = true; else releasedUp = true;
+			case "DOWN": down = value; if (value) justDown = true; else releasedDown = true;
+			case "LEFT": left = value; if (value) justLeft = true; else releasedLeft = true;
+			case "RIGHT": right = value; if (value) justRight = true; else releasedRight = true;
+			case "ACCEPT": accept = value; if (value) justAccept = true; else releasedAccept = true;
+			case "BACK": back = value; if (value) justBack = true; else releasedBack = true;
+			case "PAUSE": pause = value; if (value) justPause = true; else releasedPause = true;
 		}
 	}
 
@@ -138,6 +153,8 @@ class MobileControls extends FlxTypedGroup<FlxSprite>
 	{
 		justUp = justDown = justLeft = justRight = false;
 		justAccept = justBack = justPause = false;
+		releasedUp = releasedDown = releasedLeft = releasedRight = false;
+		releasedAccept = releasedBack = releasedPause = false;
 	}
 
 	public static function justPressed(key:String):Bool
@@ -170,6 +187,19 @@ class MobileControls extends FlxTypedGroup<FlxSprite>
 		};
 	}
 
-	public static function justReleased(key:String):Bool return false;
+	public static function justReleased(key:String):Bool
+	{
+		return switch (key)
+		{
+			case "note_up", "ui_up": releasedUp;
+			case "note_down", "ui_down": releasedDown;
+			case "note_left", "ui_left": releasedLeft;
+			case "note_right", "ui_right": releasedRight;
+			case "accept": releasedAccept;
+			case "back": releasedBack;
+			case "pause": releasedPause;
+			default: false;
+		};
+	}
 }
 #end
