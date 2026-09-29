@@ -207,6 +207,9 @@ class PlayState extends MusicBeatState
 	public var camHUD:FlxCamera;
 	public var camGame:FlxCamera;
 	public var camOther:FlxCamera;
+	#if mobile
+	private var mobileControls:backend.MobileControls;
+	#end
 	public var cameraSpeed:Float = 1;
 
 	public var songScore:Int = 0;
@@ -314,6 +317,10 @@ class PlayState extends MusicBeatState
 
 		FlxG.cameras.add(camHUD, false);
 		FlxG.cameras.add(camOther, false);
+		#if mobile
+		mobileControls = new backend.MobileControls(camHUD);
+		add(mobileControls);
+		#end
 
 		persistentUpdate = true;
 		persistentDraw = true;
