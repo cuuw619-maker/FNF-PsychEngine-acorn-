@@ -7,6 +7,7 @@ on:
     branches: [main, experimental]
   workflow_dispatch:
 
+# Actions must be allowed to read the repository and publish build artifacts.
 permissions:
   contents: read
 
@@ -73,7 +74,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-          cache: gradle
       - name: Setup Haxe
         uses: krdlab/setup-haxe@master
         with:
