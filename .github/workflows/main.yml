@@ -26,20 +26,20 @@ jobs:
       - name: Setup Haxe and Neko
         shell: pwsh
         run: |
+          choco install haxe --version=4.3.4 -y --no-progress
           choco install neko --version=2.3.0 -y --no-progress
-          $zip = "$env:TEMP\haxe.zip"
-          Invoke-WebRequest -Uri "https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-win64.zip" -OutFile $zip
-          $install = "C:\haxe-4.3.4"
-          if (Test-Path $install) { Remove-Item $install -Recurse -Force }
-          New-Item -ItemType Directory -Path $install | Out-Null
-          Expand-Archive -Path $zip -DestinationPath $install -Force
+          refreshenv
 
-          $haxeExe = Get-ChildItem $install -Filter haxe.exe -Recurse | Select-Object -First 1
-          if (-not $haxeExe) { throw "haxe.exe not found in Haxe archive" }
+          $haxeExe = Get-ChildItem "C:\ProgramData\chocolatey\lib\haxe" -Filter haxe.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $haxeExe) { throw "haxe.exe not found after installation" }
           $haxeRoot = $haxeExe.Directory.FullName
-          $stdNdl = Get-ChildItem $install -Filter std.ndll -Recurse | Select-Object -First 1
-          if (-not $stdNdl) { throw "std.ndll not found in Haxe archive" }
-          $stdPath = $stdNdl.Directory.FullName
+
+          $stdPath = Join-Path $haxeRoot "std"
+          if (-not (Test-Path $stdPath)) {
+            $stdDir = Get-ChildItem "C:\ProgramData\chocolatey\lib\haxe" -Directory -Filter std -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($stdDir) { $stdPath = $stdDir.FullName }
+          }
+          if (-not (Test-Path $stdPath)) { throw "Haxe std directory not found" }
 
           $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
           $env:HAXE_STD_PATH = $stdPath
@@ -48,9 +48,6 @@ jobs:
 
           haxe --version
           haxelib version
-          refreshenv
-          $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
-          $env:HAXE_STD_PATH = $stdPath
           neko -version
 
       - name: Install Haxe dependencies
@@ -99,7 +96,11 @@ jobs:
         run: |
           set -e
           SDKMANAGER=""
-          for p in             "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"             "$ANDROID_HOME/cmdline-tools/bin/sdkmanager"             "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"; do
+          for p in \
+            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "$ANDROID_HOME/cmdline-tools/bin/sdkmanager" \
+            "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
+            "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"; do
             if [ -x "$p" ]; then SDKMANAGER="$p"; break; fi
           done
           if [ -z "$SDKMANAGER" ]; then
@@ -108,14 +109,19 @@ jobs:
             exit 1
           fi
 
-          SDK_ROOT="$(dirname "$(dirname "$(dirname "$SDKMANAGER")")")"
+          SDK_ROOT="$(dirname "$(dirname "$(dirname "$(dirname "$SDKMANAGER")")")")"
           echo "Using Android SDK: $SDK_ROOT"
           echo "ANDROID_SDK=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
 
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER"             "platform-tools"             "platforms;android-30"             "platforms;android-35"             "build-tools;35.0.0"             "ndk;27.2.12479018"
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-30" \
+            "platforms;android-35" \
+            "build-tools;35.0.0" \
+            "ndk;27.2.12479018"
 
           echo "ANDROID_NDK_ROOT=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
