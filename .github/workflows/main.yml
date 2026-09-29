@@ -26,26 +26,22 @@ jobs:
       - name: Setup Haxe and Neko
         shell: pwsh
         run: |
-          choco install haxe --version=4.3.4 -y --no-progress
+          $ErrorActionPreference = "Stop"
           choco install neko --version=2.3.0 -y --no-progress
-          refreshenv
-
-          $haxeExe = Get-ChildItem "C:\ProgramData\chocolatey\lib\haxe" -Filter haxe.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-          if (-not $haxeExe) { throw "haxe.exe not found after installation" }
+          $zip = "$env:TEMP\haxe-4.3.4-win64.zip"
+          Invoke-WebRequest -Uri "https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-win64.zip" -OutFile $zip
+          Remove-Item "C:\haxe" -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path "C:\haxe" | Out-Null
+          Expand-Archive -Path $zip -DestinationPath "C:\haxe"
+          $haxeExe = Get-ChildItem "C:\haxe" -Filter haxe.exe -Recurse | Select-Object -First 1
+          if (-not $haxeExe) { throw "haxe.exe not found in official Haxe archive" }
           $haxeRoot = $haxeExe.Directory.FullName
-
           $stdPath = Join-Path $haxeRoot "std"
-          if (-not (Test-Path $stdPath)) {
-            $stdDir = Get-ChildItem "C:\ProgramData\chocolatey\lib\haxe" -Directory -Filter std -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($stdDir) { $stdPath = $stdDir.FullName }
-          }
-          if (-not (Test-Path $stdPath)) { throw "Haxe std directory not found" }
-
+          if (-not (Test-Path $stdPath)) { throw "Haxe std directory not found at $stdPath" }
           $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
           $env:HAXE_STD_PATH = $stdPath
           "PATH=$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           "HAXE_STD_PATH=$stdPath" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-
           haxe --version
           haxelib version
           neko -version
@@ -95,36 +91,26 @@ jobs:
         shell: bash
         run: |
           set -e
-          SDKMANAGER=""
-          for p in \
-            "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
-            "$ANDROID_HOME/cmdline-tools/bin/sdkmanager" \
-            "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" \
-            "/usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager"; do
-            if [ -x "$p" ]; then SDKMANAGER="$p"; break; fi
-          done
-          if [ -z "$SDKMANAGER" ]; then
+          SDK_ROOT="/usr/local/lib/android/sdk"
+          SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(find "$SDK_ROOT" -name sdkmanager -type f -executable | head -n 1)"
+          fi
+          if [ -z "$SDKMANAGER" ] || [ ! -x "$SDKMANAGER" ]; then
             echo "Android sdkmanager not found"
             find /usr/local/lib/android /opt -name sdkmanager -type f 2>/dev/null || true
             exit 1
           fi
-
-          SDK_ROOT="$(dirname "$(dirname "$(dirname "$(dirname "$SDKMANAGER")")")")"
           echo "Using Android SDK: $SDK_ROOT"
           echo "ANDROID_SDK=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" \
-            "platform-tools" \
-            "platforms;android-30" \
-            "platforms;android-35" \
-            "build-tools;35.0.0" \
-            "ndk;27.2.12479018"
-
+          "$SDKMANAGER" "platform-tools" "platforms;android-30" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
           echo "ANDROID_NDK_ROOT=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          test -d "$SDK_ROOT/build-tools/35.0.0"
+          test -d "$SDK_ROOT/platforms/android-30"
 
       - name: Setup Haxe and Neko
         run: |
