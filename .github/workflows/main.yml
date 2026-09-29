@@ -29,8 +29,12 @@ jobs:
           choco install haxe --version=4.3.4 -y --no-progress
           refreshenv
           $haxeRoot = (Get-Command haxe).Source | Split-Path
-          $env:Path = "$haxeRoot;$env:Path"
-          $env:Path = "C:\ProgramData\chocolatey\bin;$env:Path"
+          $stdPath = Get-ChildItem "C:\ProgramData\chocolatey\lib\haxe" -Filter std.ndll -Recurse -File | Select-Object -First 1
+          if (-not $stdPath) { throw "Haxe std.ndll was not found" }
+          $env:HAXE_STD_PATH = $stdPath.Directory.FullName
+          $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
+          "HAXE_STD_PATH=$($stdPath.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "PATH=$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           haxe --version
           haxelib version
 
@@ -76,7 +80,7 @@ jobs:
         run: |
           set -e
           SDKMANAGER=""
-          for p in             "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"             "$ANDROID_HOME/cmdline-tools/bin/sdkmanager"             "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"; do
+          for p in "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$ANDROID_HOME/cmdline-tools/bin/sdkmanager" "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"; do
             if [ -x "$p" ]; then SDKMANAGER="$p"; break; fi
           done
           if [ -z "$SDKMANAGER" ]; then
@@ -84,10 +88,14 @@ jobs:
             find "$ANDROID_HOME" -name sdkmanager -type f 2>/dev/null || true
             exit 1
           fi
+          SDK_ROOT="$(dirname "$(dirname "$(dirname "$SDKMANAGER")")")"
+          echo "ANDROID_SDK=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
-          echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
-          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
 
       - name: Setup Haxe and Neko
         run: |
@@ -107,7 +115,9 @@ jobs:
           sh ./setup/unix.sh
 
       - name: Prepare Lime Android
-        run: haxelib run lime setup android
+        run: |
+          haxelib run lime setup android
+          echo "ANDROID_SDK=$ANDROID_HOME" >> "$GITHUB_ENV"
 
       - name: Create version
         run: echo "0.1.0-${{ github.run_number }}" > VERSION
