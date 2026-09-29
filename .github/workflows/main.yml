@@ -23,26 +23,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Haxe
+      - name: Setup Haxe and Neko
         shell: pwsh
         run: |
-          choco install haxe --version=4.3.4 -y --no-progress
-          refreshenv
-          $haxeRoot = (Get-Command haxe).Source | Split-Path
-          $stdPath = Get-ChildItem "C:\ProgramData\chocolatey\lib\haxe" -Filter std.ndll -Recurse -File | Select-Object -First 1
-          if (-not $stdPath) { throw "Haxe std.ndll was not found" }
-          $env:HAXE_STD_PATH = $stdPath.Directory.FullName
-          $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
-          "HAXE_STD_PATH=$($stdPath.Directory.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          "PATH=$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          choco install neko --version=2.3.0 -y --no-progress
+          $zip = "$env:TEMP\haxe.zip"
+          Invoke-WebRequest -Uri "https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-win64.zip" -OutFile $zip
+          if (Test-Path "C:\haxe") { Remove-Item "C:\haxe" -Recurse -Force }
+          Expand-Archive -Path $zip -DestinationPath "C:\haxe"
+          $root = Get-ChildItem "C:\haxe" -Directory | Select-Object -First 1
+          if ($root) {
+            Move-Item "$($root.FullName)\*" "C:\haxe" -Force
+            Remove-Item $root.FullName -Recurse -Force
+          }
+          $env:Path = "C:\haxe;C:\ProgramData\chocolatey\bin;$env:Path"
+          $env:HAXE_STD_PATH = "C:\haxe\std"
+          "PATH=C:\haxe;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "HAXE_STD_PATH=C:\haxe\std" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          if (-not (Test-Path "C:\haxe\std\std.ndll")) { throw "Haxe std.ndll is missing" }
           haxe --version
           haxelib version
+          neko -version
 
       - name: Install Haxe dependencies
         shell: cmd
-        run: |
-          call refreshenv
-          setup\windows.bat
+        run: setup\windows.bat
 
       - name: Create version
         shell: pwsh
@@ -50,9 +55,7 @@ jobs:
 
       - name: Compile Windows
         shell: cmd
-        run: |
-          call refreshenv
-          haxelib run lime build Project.xml windows --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
+        run: haxelib run lime build Project.xml windows --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
 
       - name: Publish Windows build
         uses: actions/upload-artifact@v4
@@ -85,10 +88,12 @@ jobs:
           done
           if [ -z "$SDKMANAGER" ]; then
             echo "Android sdkmanager not found"
-            find "$ANDROID_HOME" -name sdkmanager -type f 2>/dev/null || true
+            find /usr/local/lib/android /opt -name sdkmanager -type f 2>/dev/null || true
             exit 1
           fi
-          SDK_ROOT="$(dirname "$(dirname "$(dirname "$SDKMANAGER")")")"
+          SDK_ROOT="$(dirname "$(dirname "$SDKMANAGER")")"
+          SDK_ROOT="$(dirname "$SDK_ROOT")"
+          echo "Using Android SDK: $SDK_ROOT"
           echo "ANDROID_SDK=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
@@ -102,10 +107,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y neko libvlc-dev libvlccore-dev
           curl -L --fail https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-linux64.tar.gz -o /tmp/haxe.tar.gz
+          sudo rm -rf /opt/haxe
           sudo mkdir -p /opt/haxe
           sudo tar -xzf /tmp/haxe.tar.gz -C /opt/haxe --strip-components=1
           echo "/opt/haxe" >> "$GITHUB_PATH"
+          echo "HAXE_STD_PATH=/opt/haxe/std" >> "$GITHUB_ENV"
           export PATH="/opt/haxe:$PATH"
+          export HAXE_STD_PATH="/opt/haxe/std"
           haxe --version
           haxelib version
 
@@ -115,9 +123,7 @@ jobs:
           sh ./setup/unix.sh
 
       - name: Prepare Lime Android
-        run: |
-          haxelib run lime setup android
-          echo "ANDROID_SDK=$ANDROID_HOME" >> "$GITHUB_ENV"
+        run: haxelib run lime setup android
 
       - name: Create version
         run: echo "0.1.0-${{ github.run_number }}" > VERSION
