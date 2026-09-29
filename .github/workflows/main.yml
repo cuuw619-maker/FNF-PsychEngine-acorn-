@@ -29,25 +29,33 @@ jobs:
           choco install neko --version=2.3.0 -y --no-progress
           $zip = "$env:TEMP\haxe.zip"
           Invoke-WebRequest -Uri "https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-win64.zip" -OutFile $zip
-          if (Test-Path "C:\haxe") { Remove-Item "C:\haxe" -Recurse -Force }
-          Expand-Archive -Path $zip -DestinationPath "C:\haxe"
-          $root = Get-ChildItem "C:\haxe" -Directory | Select-Object -First 1
-          if ($root) {
-            Move-Item "$($root.FullName)\*" "C:\haxe" -Force
-            Remove-Item $root.FullName -Recurse -Force
-          }
-          $env:Path = "C:\haxe;C:\ProgramData\chocolatey\bin;$env:Path"
-          $env:HAXE_STD_PATH = "C:\haxe\std"
-          "PATH=C:\haxe;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-          "HAXE_STD_PATH=C:\haxe\std" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
-          if (-not (Test-Path "C:\haxe\std\std.ndll")) { throw "Haxe std.ndll is missing" }
+          $install = "C:\haxe-4.3.4"
+          if (Test-Path $install) { Remove-Item $install -Recurse -Force }
+          New-Item -ItemType Directory -Path $install | Out-Null
+          Expand-Archive -Path $zip -DestinationPath $install -Force
+
+          $haxeExe = Get-ChildItem $install -Filter haxe.exe -Recurse | Select-Object -First 1
+          if (-not $haxeExe) { throw "haxe.exe not found in Haxe archive" }
+          $haxeRoot = $haxeExe.Directory.FullName
+          $stdNdl = Get-ChildItem $install -Filter std.ndll -Recurse | Select-Object -First 1
+          if (-not $stdNdl) { throw "std.ndll not found in Haxe archive" }
+          $stdPath = $stdNdl.Directory.FullName
+
+          $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
+          $env:HAXE_STD_PATH = $stdPath
+          "PATH=$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "HAXE_STD_PATH=$stdPath" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+
           haxe --version
           haxelib version
+          refreshenv
+          $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
+          $env:HAXE_STD_PATH = $stdPath
           neko -version
 
       - name: Install Haxe dependencies
         shell: cmd
-        run: setup\windows.bat
+        run: call setup\windows.bat
 
       - name: Create version
         shell: pwsh
@@ -55,13 +63,21 @@ jobs:
 
       - name: Compile Windows
         shell: cmd
-        run: haxelib run lime build Project.xml windows --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
+        run: call haxelib run lime build Project.xml windows --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
 
-      - name: Publish Windows build
+      - name: Stage Windows artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path build-artifacts\windows | Out-Null
+          $files = Get-ChildItem -Path export -Recurse -Filter *.exe -File -ErrorAction SilentlyContinue
+          if (-not $files) { throw "Windows EXE was not produced" }
+          $files | Copy-Item -Destination build-artifacts\windows -Force
+
+      - name: Publish Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: AcornEngine-Windows
-          path: export/release/windows/bin
+          path: build-artifacts/windows/*.exe
           if-no-files-found: error
 
   buildAndroid:
@@ -83,7 +99,7 @@ jobs:
         run: |
           set -e
           SDKMANAGER=""
-          for p in "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "$ANDROID_HOME/cmdline-tools/bin/sdkmanager" "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"; do
+          for p in             "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"             "$ANDROID_HOME/cmdline-tools/bin/sdkmanager"             "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"; do
             if [ -x "$p" ]; then SDKMANAGER="$p"; break; fi
           done
           if [ -z "$SDKMANAGER" ]; then
@@ -91,19 +107,22 @@ jobs:
             find /usr/local/lib/android /opt -name sdkmanager -type f 2>/dev/null || true
             exit 1
           fi
-          SDK_ROOT="$(dirname "$(dirname "$SDKMANAGER")")"
-          SDK_ROOT="$(dirname "$SDK_ROOT")"
+
+          SDK_ROOT="$(dirname "$(dirname "$(dirname "$SDKMANAGER")")")"
           echo "Using Android SDK: $SDK_ROOT"
           echo "ANDROID_SDK=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+          "$SDKMANAGER"             "platform-tools"             "platforms;android-30"             "platforms;android-35"             "build-tools;35.0.0"             "ndk;27.2.12479018"
+
           echo "ANDROID_NDK_ROOT=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_HOME=$SDK_ROOT/ndk/27.2.12479018" >> "$GITHUB_ENV"
 
       - name: Setup Haxe and Neko
         run: |
+          set -e
           sudo apt-get update
           sudo apt-get install -y neko libvlc-dev libvlccore-dev
           curl -L --fail https://github.com/HaxeFoundation/haxe/releases/download/4.3.4/haxe-4.3.4-linux64.tar.gz -o /tmp/haxe.tar.gz
@@ -131,11 +150,16 @@ jobs:
       - name: Compile Android APK
         run: haxelib run lime build Project.xml android --app-version="0.1.0-${{ github.run_number }}" -D officialBuild
 
-      - name: Publish Android APK
+      - name: Stage Android artifact
+        run: |
+          set -e
+          mkdir -p build-artifacts/android
+          find export -type f -name '*.apk' -print -exec cp -f {} build-artifacts/android/ \;
+          test -n "$(find build-artifacts/android -type f -name '*.apk' -print -quit)"
+
+      - name: Publish Android artifact
         uses: actions/upload-artifact@v4
         with:
           name: AcornEngine-Android
-          path: |
-            export/release/android/bin/*.apk
-            export/android/bin/*.apk
+          path: build-artifacts/android/*.apk
           if-no-files-found: error
