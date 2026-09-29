@@ -32,7 +32,7 @@ jobs:
           echo "/opt/haxe" >> "$GITHUB_PATH"
           export PATH="/opt/haxe:$PATH"
           haxe --version
-          haxelib --version
+          haxelib version
       - name: Install Haxe dependencies
         run: |
           haxelib setup ~/haxelib
