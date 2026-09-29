@@ -29,6 +29,7 @@ jobs:
           sudo mkdir -p /opt/haxe
           sudo tar -xzf /tmp/haxe.tar.gz -C /opt/haxe --strip-components=1
           echo "/opt/haxe" >> "$GITHUB_PATH"
+          export PATH="/opt/haxe:$PATH"
           haxe --version
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libvlc-dev libvlccore-dev
