@@ -38,10 +38,14 @@ jobs:
           $haxeRoot = $haxeExe.Directory.FullName
           $stdPath = Join-Path $haxeRoot "std"
           if (-not (Test-Path $stdPath)) { throw "Haxe std directory not found at $stdPath" }
-          $env:Path = "$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path"
+          $nekoRoot = (Get-ChildItem "C:\ProgramData\chocolatey\lib\neko" -Filter std.ndll -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1).Directory.FullName
+          if (-not $nekoRoot) { throw "Neko std.ndll was not found after installing Neko" }
+          $env:Path = "$haxeRoot;$nekoRoot;C:\ProgramData\chocolatey\bin;$env:Path"
           $env:HAXE_STD_PATH = $stdPath
-          "PATH=$haxeRoot;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          $env:NEKO_INSTPATH = $nekoRoot
+          "PATH=$haxeRoot;$nekoRoot;C:\ProgramData\chocolatey\bin;$env:Path" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           "HAXE_STD_PATH=$stdPath" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
+          "NEKO_INSTPATH=$nekoRoot" | Out-File $env:GITHUB_ENV -Encoding utf8 -Append
           haxe --version
           haxelib version
           neko -version
