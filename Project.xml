@@ -111,5 +111,5 @@
 	<haxedef name="hscriptPos" if="HSCRIPT_ALLOWED" />
 
 	<!-- Use only the user-provided root logo.png. No generated logo asset. -->
-	<icon path="logo.png" />
+	<icon path="icon2s.png" />
 </project>
