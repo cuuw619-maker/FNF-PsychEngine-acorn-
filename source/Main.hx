@@ -1,9 +1,5 @@
 package;
 
-#if android
-import android.content.Context;
-#end
-
 import debug.FPSCounter;
 
 import flixel.graphics.FlxGraphic;
@@ -16,6 +12,7 @@ import openfl.display.Sprite;
 import openfl.events.Event;
 import openfl.display.StageScaleMode;
 import lime.app.Application;
+import lime.system.System;
 import states.TitleState;
 
 #if HSCRIPT_ALLOWED
@@ -77,7 +74,7 @@ class Main extends Sprite
 
 		// Credits to MAJigsaw77 (he's the og author for this code)
 		#if android
-		Sys.setCwd(Path.addTrailingSlash(Context.getExternalFilesDir()));
+		Sys.setCwd(Path.addTrailingSlash(System.applicationStorageDirectory));
 		#elseif ios
 		Sys.setCwd(lime.system.System.applicationStorageDirectory);
 		#end
