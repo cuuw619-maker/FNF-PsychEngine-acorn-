@@ -4,7 +4,7 @@ package backend;
 import flixel.FlxG;
 import flixel.FlxSprite;
 import flixel.text.FlxText;
-import flixel.group.FlxTypedGroup;
+import flixel.group.FlxGroup.FlxTypedGroup;
 import flixel.util.FlxColor;
 import openfl.Lib;
 import openfl.events.TouchEvent;
