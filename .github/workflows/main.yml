@@ -65,16 +65,29 @@ jobs:
       - name: Stage Windows artifact
         shell: pwsh
         run: |
+          $ErrorActionPreference = "Stop"
+          $buildRoot = Get-ChildItem -Path export -Directory -Recurse -ErrorAction SilentlyContinue |
+            Where-Object { Test-Path (Join-Path $_.FullName "*.exe") } |
+            Select-Object -First 1
+          if (-not $buildRoot) {
+            $exe = Get-ChildItem -Path export -Recurse -Filter *.exe -File -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (-not $exe) { throw "Windows EXE was not produced" }
+            $buildRoot = $exe.Directory
+          }
           New-Item -ItemType Directory -Force -Path build-artifacts\windows | Out-Null
-          $files = Get-ChildItem -Path export -Recurse -Filter *.exe -File -ErrorAction SilentlyContinue
-          if (-not $files) { throw "Windows EXE was not produced" }
-          $files | Copy-Item -Destination build-artifacts\windows -Force
+          Copy-Item -Path (Join-Path $buildRoot.FullName "*") -Destination build-artifacts\windows -Recurse -Force
+          if (-not (Get-ChildItem build-artifacts\windows -Filter *.exe -File -Recurse | Select-Object -First 1)) {
+            throw "Staged Windows artifact does not contain an EXE"
+          }
+          if (-not (Get-ChildItem build-artifacts\windows -Filter *.dll -File -Recurse | Select-Object -First 1)) {
+            throw "Staged Windows artifact does not contain required DLL runtime files"
+          }
 
       - name: Publish Windows artifact
         uses: actions/upload-artifact@v4
         with:
           name: AcornEngine-Windows
-          path: build-artifacts/windows/*.exe
+          path: build-artifacts/windows/**
           if-no-files-found: error
 
   buildAndroid:
